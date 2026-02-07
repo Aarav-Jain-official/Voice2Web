@@ -28,12 +28,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           result = await handleGoogleSearch(message.data.data);
           break;
 
+        case 'NAVIGATION':
+          result = await handleNavigation(message.data.data);
+          break;
+
         case 'FORM_FILL':
           result = await handleFormFill(message.data.data);
           break;
 
         case 'WEBSITE_SEARCH':
           result = await handleWebsiteSearch(message.data.data);
+          // console.log('[Content] Website Search in router.js:', message.data.data);
           break;
 
         case 'BOOK_TICKET':
@@ -93,44 +98,19 @@ function handleGoogleSearch(data) {
 ============================================================================ */
 
 async function handleWebsiteSearch(data) {
+  console.log('[Content] Website Search:', data);
+  return sendToContent({
+    type: "WEBSITE_SEARCH",
+    payload: data
+  });
+}
 
-  const query = data.entities.query;
+async function handleNavigation(data) {
 
-  if (!query) {
-    throw new Error('No query provided');
-  }
-
-  console.log('[Content] Website Search:', query);
-
-  const searchInput =
-    document.querySelector('input[type="search"], input[name*="search"], input[placeholder*="search"]');
-
-  if (!searchInput) {
-    throw new Error('No search box found on website');
-  }
-
-  searchInput.focus();
-  searchInput.value = query;
-
-  searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-  searchInput.dispatchEvent(new Event('change', { bubbles: true }));
-
-  await wait(300);
-
-  // Try submit
-  if (searchInput.form) {
-    searchInput.form.submit();
-  } else {
-    searchInput.dispatchEvent(new KeyboardEvent('keydown', {
-      key: 'Enter',
-      bubbles: true
-    }));
-  }
-
-  return {
-    success: true,
-    message: 'Website search completed'
-  };
+  return sendToContent({
+    type: "NAVIGATION",
+    payload: data
+  });
 }
 
 
@@ -311,21 +291,21 @@ async function sendToContent(payload) {
 
     // 5️⃣ Wait for listener
     await new Promise(r => setTimeout(r, 600));
-    console.log('[Router] Sending payload to content.js:', payload);
     // 6️⃣ Send message
     return await new Promise((resolve, reject) => {
-
+      
       chrome.tabs.sendMessage(tabId, payload, (response) => {
-
+        
         if (chrome.runtime.lastError) {
           reject(new Error(chrome.runtime.lastError.message));
           return;
         }
-
+        
         if (!response) {
           reject(new Error('No response from content.js'));
           return;
         }
+        console.log('[Router] Sending payload to content.js:', payload);
         
         resolve(response);
       });

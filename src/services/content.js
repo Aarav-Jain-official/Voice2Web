@@ -23,7 +23,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           result = await googleSearch(msg.payload);
           break;
 
+        case 'NAVIGATION':
+          result = await handleNavigation(msg.payload);
+          break;
+
         case 'WEBSITE_SEARCH':
+          console.log('[Content] Website Search:', msg.payload);
           result = await websiteSearch(msg.payload);
           break;
 
@@ -88,31 +93,54 @@ async function googleSearch(data) {
   };
 }
 
+async function handleNavigation(data) {
+  console.log('[Content] Navigation:', data);
+  const url = data.entities.url;
+
+  if (!url) throw new Error('No URL');
+
+  console.log('[Content] Navigating to:', url);
+
+  setTimeout(() => {
+
+    window.location.href = url;
+
+  }, 200);
+
+  return {
+    message: 'Redirecting'
+  };
+}
+
 
 async function websiteSearch(data) {
 
-  const q = data.entities.query;
+  console.log('[Content] Website search');
 
-  if (!q) throw new Error('No query');
+  const query = data.entities?.query;
 
-  const input =
-    document.querySelector('input[type="search"], input[name*=search]');
+  if (!query) {
+    throw new Error('Missing query');
+  }
 
-  if (!input) throw new Error('Search box not found');
+  const input = document.querySelector(
+    'input[type="search"], input[name*="search"], input[placeholder*="search"]'
+  );
+
+  if (!input) {
+    throw new Error('Search box not found');
+  }
 
   input.focus();
-  input.value = q;
+  input.value = query;
 
   input.dispatchEvent(new Event('input', { bubbles: true }));
 
-  await wait(300);
-
   input.form?.submit();
 
-  return {
-    message: 'Search submitted'
-  };
+  return { message: 'Search submitted' };
 }
+
 
 
 async function formFill(data) {
